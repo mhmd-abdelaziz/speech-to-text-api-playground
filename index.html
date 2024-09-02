@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="Speech-to-Text API Playground" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Playground</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif,
+          "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+          "Noto Color Emoji";
+      }
+
+      /* Header */
+      .header {
+        padding: 20px;
+        margin-bottom: 70px;
+        background-color: #7952b3;
+
+        .title {
+          color: white;
+        }
+      }
+
+      /* Main */
+      .container {
+        width: 500px;
+        display: grid;
+        max-width: 100%;
+        margin-inline: auto;
+        justify-content: center;
+        grid-auto-columns: 100%;
+        min-height: calc(100vh - (83px + 70px));
+        .section-title {
+          margin-bottom: 20px;
+        }
+        [role="alert"] {
+          color: red;
+          margin-top: 10px;
+        }
+      }
+
+      /* Form */
+      .form {
+        display: grid;
+        row-gap: 30px;
+
+        .input-control {
+          display: flex;
+          flex-direction: column;
+          .label {
+            color: #212529;
+            font-weight: 400;
+            margin-bottom: 4px;
+          }
+          .input {
+            resize: none;
+            display: block;
+            width: 100%;
+            padding: 0.375rem 0.75rem;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: #212529;
+            background-color: #fff;
+            background-clip: padding-box;
+            border: 1px solid #ced4da;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            border-radius: 0.25rem;
+          }
+        }
+        .submit-btn {
+          font-size: 1rem;
+          line-height: 1.5;
+          background: none;
+          border-radius: 0.25rem;
+          padding: 0.375rem 0.75rem;
+          transition: color 0.15s ease-in-out,
+            background-color 0.15s ease-in-out, border-color 0.15s ease-in-out,
+            box-shadow 0.15s ease-in-out;
+
+          color: #673ab7;
+          border: 1px solid #673ab7;
+
+          &:is(:hover, :focus-visible):not(:disabled) {
+            color: #fff;
+            cursor: pointer;
+            border-color: #673ab7;
+            background-color: #673ab7;
+          }
+          &:disabled {
+            color: #ced4da;
+            cursor: not-allowed;
+            border-color: #ced4da;
+          }
+        }
+      }
+
+      /* Result */
+      .result-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        .section-title {
+          margin-bottom: 0;
+        }
+      }
+      .result-actions {
+        column-gap: 10px;
+        flex-direction: row-reverse;
+        &:not([hidden]) {
+          display: flex;
+        }
+        .result-action {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          outline: 0;
+          cursor: pointer;
+          padding: 5px 16px;
+          font-size: 14px;
+          font-weight: 500;
+          line-height: 20px;
+          vertical-align: middle;
+          border: 1px solid;
+          border-radius: 6px;
+          color: #24292e;
+          background-color: #fafbfc;
+          border-color: #1b1f2326;
+          box-shadow: rgba(27, 31, 35, 0.04) 0px 1px 0px 0px,
+            rgba(255, 255, 255, 0.25) 0px 1px 0px 0px inset;
+          transition: 0.2s cubic-bezier(0.3, 0, 0.5, 1);
+          transition-property: color, background-color, border-color;
+          &:is(:hover, :focus-visible) {
+            background-color: #f3f4f6;
+            border-color: #1b1f2326;
+            transition-duration: 0.1s;
+          }
+        }
+      }
+      .result-container {
+        height: 300px;
+        padding: 10px;
+        overflow-y: auto;
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+        background-color: #f4f4f4;
+      }
+
+      /* Loader */
+      .backdrop {
+        inset: 0;
+        position: fixed;
+        background: rgb(0 0 0 / 30%);
+        place-items: center;
+        &:not([hidden]) {
+          display: grid;
+        }
+
+        .loader {
+          width: 50px;
+          aspect-ratio: 1;
+          display: grid;
+          color: #854f1d;
+          background: radial-gradient(
+            farthest-side,
+            currentColor calc(100% - 6px),
+            #0000 calc(100% - 5px) 0
+          );
+          -webkit-mask: radial-gradient(
+            farthest-side,
+            #0000 calc(100% - 13px),
+            #000 calc(100% - 12px)
+          );
+          border-radius: 50%;
+          animation: loader 2s infinite linear;
+          &::before,
+          &::after {
+            content: "";
+            grid-area: 1/1;
+            background: linear-gradient(currentColor 0 0) center,
+              linear-gradient(currentColor 0 0) center;
+            background-size: 100% 10px, 10px 100%;
+            background-repeat: no-repeat;
+          }
+          &::after {
+            transform: rotate(45deg);
+          }
+        }
+      }
+      @keyframes loader {
+        100% {
+          transform: rotate(1turn);
+        }
+      }
+    </style>
+
+    <!-- <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script> -->
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <h1 class="title">Playground</h1>
+    </header>
+
+    <!-- Main -->
+    <main class="container">
+      <!-- Form -->
+      <section>
+        <h2 class="section-title">Form</h2>
+        <form class="form">
+          <label class="input-control">
+            <span class="label">Upload an audio file</span>
+            <input class="input" name="file" type="file" />
+          </label>
+
+          <label class="input-control">
+            <span class="label">Paste your config</span>
+            <textarea class="input" name="config" rows="3" cols="30"></textarea>
+          </label>
+
+          <button type="submit" class="submit-btn">Submit</button>
+        </form>
+        <p role="alert" hidden></p>
+      </section>
+
+      <!-- Results -->
+      <section>
+        <div class="result-header">
+          <h2 class="section-title">Result</h2>
+          <div hidden class="result-actions">
+            <button id="copy-btn" class="result-action">
+              <!-- prettier-ignore -->
+              <svg role="graphics-symbol" focusable="false" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 16" style="width: 16px; height: 16px; display: block; fill: currentColor; flex-shrink: 0; padding-right: 4px;"><path d="M2.404 15.322h5.701c1.26 0 1.887-.662 1.887-1.927V12.38h1.154c1.254 0 1.91-.662 1.91-1.928V5.555c0-.774-.158-1.266-.626-1.74L9.512.837C9.066.387 8.545.21 7.865.21H5.463c-1.254 0-1.91.662-1.91 1.928v1.084H2.404c-1.254 0-1.91.668-1.91 1.933v8.239c0 1.265.656 1.927 1.91 1.927zm7.588-6.62c0-.792-.1-1.161-.592-1.665L6.225 3.814c-.452-.462-.844-.58-1.5-.591V2.215c0-.533.28-.832.843-.832h2.38v2.883c0 .726.386 1.113 1.107 1.113h2.83v4.998c0 .539-.276.832-.844.832H9.992V8.701zm-.79-4.29c-.206 0-.288-.088-.288-.287V1.594l2.771 2.818H9.201zM2.503 14.15c-.563 0-.844-.293-.844-.832V5.232c0-.539.281-.837.85-.837h1.91v3.187c0 .85.416 1.26 1.26 1.26h3.14v4.476c0 .54-.28.832-.843.832H2.504zM5.79 7.816c-.24 0-.346-.105-.346-.345V4.547l3.223 3.27H5.791z"></path></svg>
+              Copy
+            </button>
+            <button id="download-btn" class="result-action">
+              <!-- prettier-ignore -->
+              <svg role="graphics-symbol" focusable="false" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width: 16px; height: 16px; display: block; fill: currentColor; flex-shrink: 0; padding-right: 4px;"><!--!Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M288 32c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 242.7-73.4-73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l128 128c12.5 12.5 32.8 12.5 45.3 0l128-128c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L288 274.7 288 32zM64 352c-35.3 0-64 28.7-64 64l0 32c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-32c0-35.3-28.7-64-64-64l-101.5 0-45.3 45.3c-25 25-65.5 25-90.5 0L165.5 352 64 352zm368 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg>
+              Download
+            </button>
+          </div>
+        </div>
+        <pre class="result-container"></pre>
+      </section>
+    </main>
+
+    <!-- Loader -->
+    <div hidden class="backdrop">
+      <p
+        role="alert"
+        class="loader"
+        aria-live="assertive"
+        aria-label="Loading"
+      ></p>
+    </div>
+
+    <script>
+      (function () {
+        const $ = document.querySelector.bind(document);
+        const PORT = "1234";
+        const URL = `http://127.0.0.1:${PORT}`;
+
+        // Submit form
+        $(".form").addEventListener("submit", (e) => {
+          e.preventDefault();
+          const formData = new FormData($(".form"));
+
+          if (validate(formData)) {
+            handleUILoading();
+            fetch(`${URL}/transcribe`, { method: "POST", body: formData })
+              .then((res) => res.json())
+              .then(handleSuccess)
+              .catch(handleError)
+              .finally(handleResetUILoading);
+          }
+        });
+
+        /* Helpers */
+
+        const validate = (formData) => {
+          let msg = "";
+          if (!$(".form").file.files.length) {
+            msg = "Please upload an audio file";
+          }
+          // if (!config && !configFile) {
+          //   msg = "Please upload a config file or paste your config";
+          // }
+
+          if (msg) {
+            $('[role="alert"]').innerHTML = msg;
+            $('[role="alert"]').removeAttribute("hidden");
+          } else {
+            $('[role="alert"]').setAttribute("hidden", "hidden");
+            return true;
+          }
+        };
+
+        const handleUILoading = () => {
+          $(".backdrop").removeAttribute("hidden");
+          $(".submit-btn").setAttribute("disabled", "disabled");
+        };
+
+        const handleResetUILoading = () => {
+          $(".submit-btn").removeAttribute("disabled");
+          $(".backdrop").setAttribute("hidden", "hidden");
+        };
+
+        const handleSuccess = (res) => {
+          console.log("Success:", res);
+          const json = JSON.stringify(res, null, 4);
+
+          $("#copy-btn").onclick = () => copy(json);
+          $("#download-btn").onclick = () => download(json);
+          $(".result-actions").removeAttribute("disabled");
+          $(".result-container").innerHTML = `<code>${json}</code>`;
+        };
+
+        const handleError = (error) => {
+          console.error("Error:", error);
+        };
+
+        const copy = (json) => {
+          navigator.clipboard.writeText(json);
+        };
+        const download = (json) => {
+          const blob = new Blob([json], { type: "application/json" });
+          const link = document.createElement("a");
+          link.download = "result.json";
+          link.href = URL.createObjectURL(blob);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        };
+
+        //   const json = JSON.stringify(
+        //   [
+        //     {
+        //       color: "red",
+        //       value: "#f00",
+        //     },
+        //     {
+        //       color: "green",
+        //       value: "#0f0",
+        //     },
+        //     {
+        //       color: "blue",
+        //       value: "#00f",
+        //     },
+        //     {
+        //       color: "cyan",
+        //       value: "#0ff",
+        //     },
+        //     {
+        //       color: "magenta",
+        //       value: "#f0f",
+        //     },
+        //     {
+        //       color: "yellow",
+        //       value: "#ff0",
+        //     },
+        //     {
+        //       color: "black",
+        //       value: "#000",
+        //     },
+        //   ],
+        //   null,
+        //   4
+        // );
+
+        // $(".result-container").innerHTML = `<code>${json}</code>`;
+
+        // hljs.highlightAll();
+      })();
+    </script>
+  </body>
+</html>
